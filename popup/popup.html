@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 300px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0f0f;
+      color: #e5e5e5;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ef4444;
+    }
+    .header .icon {
+      width: 24px;
+      height: 24px;
+      background: #ef4444;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .status {
+      font-size: 12px;
+      color: #737373;
+      margin-bottom: 12px;
+    }
+    .status.active { color: #ef4444; }
+    .count {
+      font-size: 13px;
+      color: #a3a3a3;
+      margin-bottom: 16px;
+      padding: 8px 12px;
+      background: #1a1a1a;
+      border-radius: 6px;
+    }
+    .count span { color: #ef4444; font-weight: 600; }
+    button {
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-bottom: 8px;
+    }
+    .btn-primary {
+      background: #ef4444;
+      color: white;
+    }
+    .btn-primary:hover { background: #dc2626; }
+    .btn-primary.active {
+      background: #1a1a1a;
+      color: #ef4444;
+      border: 1px solid #ef4444;
+    }
+    .btn-secondary {
+      background: #1a1a1a;
+      color: #a3a3a3;
+      border: 1px solid #262626;
+    }
+    .btn-secondary:hover {
+      background: #262626;
+      color: #e5e5e5;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="icon">S</div>
+    <h1>Universal Scraper</h1>
+  </div>
+
+  <div id="status" class="status">Ready</div>
+
+  <div id="count" class="count">
+    <span id="selectedCount">0</span> elements selected
+  </div>
+
+  <button id="pickBtn" class="btn-primary">Start Picking</button>
+  <button id="panelBtn" class="btn-secondary">Open Side Panel</button>
+
+  <script src="popup.js"></script>
+</body>
+</html>

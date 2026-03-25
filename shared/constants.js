@@ -1,0 +1,45 @@
+// Message types for chrome.runtime messaging
+const MSG = {
+  TOGGLE_PICK_MODE: 'TOGGLE_PICK_MODE',
+  ELEMENT_SELECTED: 'ELEMENT_SELECTED',
+  ELEMENT_DESELECTED: 'ELEMENT_DESELECTED',
+  START_EXTRACTION: 'START_EXTRACTION',
+  EXTRACTION_RESULT: 'EXTRACTION_RESULT',
+  ITERATE_PAGINATION: 'ITERATE_PAGINATION',
+  ITERATE_LIST: 'ITERATE_LIST',
+  ITERATE_SCROLL: 'ITERATE_SCROLL',
+  PAGE_READY: 'PAGE_READY',
+  ITERATION_COMPLETE: 'ITERATION_COMPLETE',
+  ITERATION_PROGRESS: 'ITERATION_PROGRESS',
+  OPEN_SIDE_PANEL: 'OPEN_SIDE_PANEL',
+  STATE_UPDATE: 'STATE_UPDATE',
+  GET_STATE: 'GET_STATE',
+  MARK_NEXT_BUTTON: 'MARK_NEXT_BUTTON',
+  MARK_LIST_ITEMS: 'MARK_LIST_ITEMS',
+  SAVE_SCRAPE: 'SAVE_SCRAPE',
+  EXPORT_DATA: 'EXPORT_DATA',
+  CLEAR_SELECTIONS: 'CLEAR_SELECTIONS',
+  REMOVE_SELECTION: 'REMOVE_SELECTION',
+  STOP_ITERATION: 'STOP_ITERATION',
+};
+
+// Extraction modes
+const MODES = {
+  SINGLE: 'single',
+  PAGINATION: 'pagination',
+  LIST: 'list',
+  SCROLL: 'scroll',
+};
+
+// Extension status
+const STATUS = {
+  IDLE: 'idle',
+  PICKING: 'picking',
+  EXTRACTING: 'extracting',
+  ITERATING: 'iterating',
+};
+
+// Make available as ES module for service worker / sidepanel
+if (typeof globalThis.__uniScraper === 'undefined') {
+  globalThis.__uniScraper = { MSG, MODES, STATUS };
+}
