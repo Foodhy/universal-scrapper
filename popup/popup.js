@@ -11,13 +11,10 @@ async function init() {
   if (!tab) return;
   currentTabId = tab.id;
 
-  // Get current state
   chrome.runtime.sendMessage(
     { type: 'GET_STATE', tabId: currentTabId },
     (response) => {
-      if (response?.state) {
-        updateUI(response.state);
-      }
+      if (response?.state) updateUI(response.state);
     }
   );
 }
@@ -27,15 +24,15 @@ function updateUI(state) {
   countEl.textContent = state.selectedElements?.length || 0;
 
   if (isPicking) {
-    pickBtn.textContent = 'Stop Picking';
-    pickBtn.classList.add('active');
-    statusEl.textContent = 'Picking elements...';
-    statusEl.classList.add('active');
+    pickBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="1"/></svg> Stop Picking`;
+    pickBtn.classList.add('picking');
+    statusEl.textContent = 'Picking';
+    statusEl.classList.add('picking');
   } else {
-    pickBtn.textContent = 'Start Picking';
-    pickBtn.classList.remove('active');
+    pickBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg> Start Picking`;
+    pickBtn.classList.remove('picking');
     statusEl.textContent = state.status === 'idle' ? 'Ready' : state.status;
-    statusEl.classList.remove('active');
+    statusEl.classList.remove('picking');
   }
 }
 
@@ -60,15 +57,11 @@ pickBtn.addEventListener('click', () => {
 panelBtn.addEventListener('click', () => {
   if (!currentTabId) return;
   chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL', tabId: currentTabId });
-  // Also open side panel directly
   chrome.sidePanel.open({ tabId: currentTabId }).catch(() => {});
 });
 
-// Listen for state updates
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === 'STATE_UPDATE' && msg.state) {
-    updateUI(msg.state);
-  }
+  if (msg.type === 'STATE_UPDATE' && msg.state) updateUI(msg.state);
 });
 
 init();

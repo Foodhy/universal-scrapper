@@ -29,6 +29,7 @@ const MODES = {
   PAGINATION: 'pagination',
   LIST: 'list',
   SCROLL: 'scroll',
+  ASSEMBLED: 'assembled',
 };
 
 const STATUS = {
@@ -270,6 +271,8 @@ async function handleExtraction(tabId, state) {
     await handleScroll(tabId, state, selectors);
   } else if (state.extractionMode === MODES.LIST) {
     await handleListIteration(tabId, state, selectors);
+  } else if (state.extractionMode === MODES.ASSEMBLED) {
+    await handleAssembledIteration(tabId, state);
   }
 }
 
@@ -490,18 +493,121 @@ async function handleListIteration(tabId, state, selectors) {
   broadcastState(tabId);
 }
 
+async function handleAssembledIteration(tabId, state) {
+  state.status = STATUS.ITERATING;
+  broadcastState(tabId);
+
+  const maxCases = state.iterationConfig.maxPages || 20;
+  const maxPages = state.iterationConfig.assembledMaxPages || 1;
+  let totalExtracted = 0;
+
+  for (let page = 0; page < maxPages; page++) {
+    if (state.stopRequested) break;
+
+    // Get count of cases on this page
+    const countResult = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => window.__uniScraper_assembled?.getCaseList()?.length || 0,
+    });
+    const caseCount = countResult[0]?.result || 0;
+    if (caseCount === 0) break;
+
+    const casesToProcess = Math.min(caseCount, maxCases - totalExtracted);
+
+    // Open the first case
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (idx) => window.__uniScraper_assembled?.openCase(idx),
+      args: [0],
+    });
+    await new Promise(r => setTimeout(r, 1500));
+
+    // Iterate through cases using Next button
+    for (let i = 0; i < casesToProcess; i++) {
+      if (state.stopRequested) break;
+
+      // Scroll messages to bottom first to ensure all are loaded
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => window.__uniScraper_assembled?.scrollMessagesToBottom(),
+      });
+      await new Promise(r => setTimeout(r, 500));
+
+      // Extract full case data
+      const extractResult = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => window.__uniScraper_assembled?.extractFullCase(),
+      });
+
+      const caseData = extractResult[0]?.result;
+      if (caseData) {
+        state.results.push(caseData);
+        totalExtracted++;
+      }
+
+      // Report progress
+      chrome.runtime.sendMessage({
+        type: MSG.ITERATION_PROGRESS,
+        page: totalExtracted,
+        maxPages: maxCases,
+        resultCount: state.results.length,
+      }).catch(() => {});
+
+      broadcastState(tabId);
+
+      // Click Next to go to the next case (unless last)
+      if (i < casesToProcess - 1) {
+        const nextResult = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: () => window.__uniScraper_assembled?.clickNext(),
+        });
+        if (!nextResult[0]?.result) break;
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    // Close dialog before going to next page
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => window.__uniScraper_assembled?.closeDialog(),
+    });
+    await new Promise(r => setTimeout(r, 500));
+
+    // Go to next table page if needed
+    if (page < maxPages - 1 && totalExtracted < maxCases) {
+      const nextPageResult = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: () => window.__uniScraper_assembled?.goToNextPage(),
+      });
+      if (!nextPageResult[0]?.result) break;
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+
+  state.status = STATUS.IDLE;
+  broadcastState(tabId);
+}
+
 // Clean up when tab closes
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabStates.delete(tabId);
 });
 
-// Inject Slack adapter when navigating to Slack
+// Inject site-specific adapters when navigating
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url?.includes('app.slack.com')) {
-    chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['content/slack-adapter.js'],
-    }).catch(() => {});
+  if (changeInfo.status === 'complete') {
+    if (tab.url?.includes('app.slack.com')) {
+      chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content/slack-adapter.js'],
+      }).catch(() => {});
+    }
+    if (tab.url?.includes('app.assembledhq.com')) {
+      chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['content/assembled-adapter.js'],
+      }).catch(() => {});
+    }
   }
 });
 
