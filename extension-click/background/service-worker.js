@@ -103,12 +103,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const state = getTabState(tabId);
       // Avoid duplicates
       if (!state.selectedElements.find(e => e.selector === msg.selector)) {
+        const defaultLabel = msg.columnHeader || `Element ${state.selectedElements.length + 1}`;
         state.selectedElements.push({
           selector: msg.selector,
           preview: msg.preview,
           tagName: msg.tagName,
           html: msg.html,
-          label: `Element ${state.selectedElements.length + 1}`,
+          matchCount: msg.matchCount || 1,
+          label: defaultLabel,
         });
       }
       broadcastState(tabId);

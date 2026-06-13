@@ -19,6 +19,12 @@
   outline-offset: 2px !important;
 }
 
+.__uni-scraper-column-hover {
+  outline: 2px dashed #10b981 !important;
+  outline-offset: 2px !important;
+  background: rgba(16, 185, 129, 0.05) !important;
+}
+
 .__uni-scraper-overlay {
   position: fixed !important;
   top: 0 !important;

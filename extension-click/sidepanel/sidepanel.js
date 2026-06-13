@@ -140,11 +140,16 @@ function renderElementList() {
     return;
   }
 
-  elementList.innerHTML = els.map((el, i) => `
+  elementList.innerHTML = els.map((el, i) => {
+    const matchBadge = (el.matchCount && el.matchCount > 1)
+      ? `<span class="element-match-count">${el.matchCount} matches</span>`
+      : '';
+    return `
     <div class="element-card">
       <div class="element-card-body">
         <div class="element-card-top">
           <span class="element-tag">${esc(el.tagName || 'el')}</span>
+          ${matchBadge}
           <input class="element-label" value="${esc(el.label)}" data-index="${i}" data-selector="${esc(el.selector)}">
         </div>
         <div class="element-selector">${esc(el.selector)}</div>
@@ -152,7 +157,8 @@ function renderElementList() {
       </div>
       <button class="element-remove" data-selector="${esc(el.selector)}" title="Remove">&times;</button>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   elementList.querySelectorAll('.element-remove').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -203,7 +209,7 @@ function renderResults() {
     html += '<tr>';
     labels.forEach(l => {
       const val = row[l];
-      const text = val?.text || val || '';
+      const text = (val && typeof val === 'object') ? (val.text ?? '') : (val ?? '');
       html += `<td>${esc(String(text))}</td>`;
     });
     html += '</tr>';
@@ -580,7 +586,7 @@ function exportResults(format) {
         count: results.length,
         data: isAssembled ? results : results.map(row => {
           const flat = {};
-          Object.entries(row).forEach(([k, v]) => { flat[k] = v?.text || v; });
+          Object.entries(row).forEach(([k, v]) => { flat[k] = (v && typeof v === 'object') ? (v.text ?? '') : (v ?? ''); });
           return flat;
         }),
       }, null, 2);
@@ -603,7 +609,11 @@ function exportResults(format) {
         const labels = Object.keys(results[0] || {});
         const header = labels.map(l => `"${l.replace(/"/g, '""')}"`).join(',');
         const rows = results.map(row =>
-          labels.map(l => `"${String(row[l]?.text || row[l] || '').replace(/"/g, '""')}"`).join(',')
+          labels.map(l => {
+            const v = row[l];
+            const text = (v && typeof v === 'object') ? (v.text ?? '') : (v ?? '');
+            return `"${String(text).replace(/"/g, '""')}"`;
+          }).join(',')
         );
         content = [header, ...rows].join('\n');
       }
@@ -617,7 +627,11 @@ function exportResults(format) {
       md += '| ' + labels.join(' | ') + ' |\n';
       md += '| ' + labels.map(() => '---').join(' | ') + ' |\n';
       results.forEach(row => {
-        md += '| ' + labels.map(l => String(row[l]?.text || row[l] || '').replace(/\|/g, '\\|').replace(/\n/g, ' ')).join(' | ') + ' |\n';
+        md += '| ' + labels.map(l => {
+          const v = row[l];
+          const text = (v && typeof v === 'object') ? (v.text ?? '') : (v ?? '');
+          return String(text).replace(/\|/g, '\\|').replace(/\n/g, ' ');
+        }).join(' | ') + ' |\n';
       });
       content = md;
       filename = `scrape-${ts}.md`;
@@ -637,7 +651,11 @@ function exportResults(format) {
         h += '</tr></thead><tbody>';
         results.forEach(row => {
           h += '<tr>';
-          labels.forEach(l => { h += `<td>${row[l]?.html || row[l]?.text || row[l] || ''}</td>`; });
+          labels.forEach(l => {
+            const v = row[l];
+            const text = (v && typeof v === 'object') ? (v.html || v.text || '') : (v ?? '');
+            h += `<td>${text}</td>`;
+          });
           h += '</tr>';
         });
         h += '</tbody></table></body></html>';

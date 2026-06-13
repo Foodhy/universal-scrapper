@@ -5,6 +5,8 @@
   let pickMode = false;
   let specialMode = null; // null | 'next-button' | 'list-item'
   let overlay = null;
+  let columnHoverElements = []; // Track elements highlighted during column hover
+  let columnHoverTimeout = null;
 
   function createOverlay(text) {
     removeOverlay();
@@ -35,16 +37,44 @@
     }
   }
 
+  function clearColumnHover() {
+    columnHoverElements.forEach(el => el.classList.remove('__uni-scraper-column-hover'));
+    columnHoverElements = [];
+  }
+
   function onMouseOver(e) {
     if (!pickMode) return;
     const el = e.target;
     if (el.classList.contains('__uni-scraper-overlay')) return;
     el.classList.add('__uni-scraper-hover');
+
+    // Debounced hover preview — shows all similar elements that would be selected
+    if (!specialMode) {
+      clearTimeout(columnHoverTimeout);
+      columnHoverTimeout = setTimeout(() => {
+        clearColumnHover();
+        if (typeof window.__uniScraper_getColumnSelector === 'function') {
+          const result = window.__uniScraper_getColumnSelector(el);
+          if (result && result.matchCount > 1) {
+            try {
+              document.querySelectorAll(result.selector).forEach(m => {
+                if (!m.classList.contains('__uni-scraper-selected')) {
+                  m.classList.add('__uni-scraper-column-hover');
+                  columnHoverElements.push(m);
+                }
+              });
+            } catch (e) { /* ignore */ }
+          }
+        }
+      }, 80);
+    }
   }
 
   function onMouseOut(e) {
     if (!pickMode) return;
     e.target.classList.remove('__uni-scraper-hover');
+    clearTimeout(columnHoverTimeout);
+    clearColumnHover();
   }
 
   function onClick(e) {
@@ -91,23 +121,55 @@
       return;
     }
 
-    // Normal selection toggle
+    // Normal selection — try column selector to find all similar elements
+    let finalSelector = selector;
+    let matchCount = 1;
+    let columnHeader = null;
+
+    if (typeof window.__uniScraper_getColumnSelector === 'function') {
+      const colResult = window.__uniScraper_getColumnSelector(el);
+      if (colResult && colResult.matchCount > 1) {
+        finalSelector = colResult.selector;
+        matchCount = colResult.matchCount;
+      }
+    }
+    if (typeof window.__uniScraper_getColumnHeader === 'function') {
+      columnHeader = window.__uniScraper_getColumnHeader(el);
+    }
+
     const isSelected = el.classList.contains('__uni-scraper-selected');
 
     if (isSelected) {
-      el.classList.remove('__uni-scraper-selected');
+      // Deselect all matching elements
+      try {
+        document.querySelectorAll(finalSelector).forEach(m => {
+          m.classList.remove('__uni-scraper-selected');
+        });
+      } catch (e) {
+        el.classList.remove('__uni-scraper-selected');
+      }
       chrome.runtime.sendMessage({
         type: MSG.ELEMENT_DESELECTED,
-        selector,
+        selector: finalSelector,
       });
     } else {
-      el.classList.add('__uni-scraper-selected');
+      // Select all matching elements visually
+      clearColumnHover();
+      try {
+        document.querySelectorAll(finalSelector).forEach(m => {
+          m.classList.add('__uni-scraper-selected');
+        });
+      } catch (e) {
+        el.classList.add('__uni-scraper-selected');
+      }
       chrome.runtime.sendMessage({
         type: MSG.ELEMENT_SELECTED,
-        selector,
+        selector: finalSelector,
         preview,
         tagName,
         html,
+        matchCount,
+        columnHeader,
       });
     }
   }
@@ -147,9 +209,13 @@
   }
 
   function removeSelection(selector) {
-    const el = window.__uniScraper_getElementBySelector(selector);
-    if (el) {
-      el.classList.remove('__uni-scraper-selected');
+    try {
+      document.querySelectorAll(selector).forEach(el => {
+        el.classList.remove('__uni-scraper-selected');
+      });
+    } catch (e) {
+      const el = window.__uniScraper_getElementBySelector(selector);
+      if (el) el.classList.remove('__uni-scraper-selected');
     }
   }
 
