@@ -1,0 +1,24 @@
+# Corrida corta de SoyRappi en Colombia. La ficha está en profiles/rappi-co.yaml.
+# Histórico: python -m playstore_reviews --config profiles/rappi-co-full.yaml
+
+profile: profiles/rappi-co.yaml
+
+transport:
+  # auto recorre strategy_order y se queda con la primera que traiga filas.
+  strategy: auto
+  strategy_order:
+    - library
+    - batchexecute
+  per_query_limit: 20
+  page_size: 100
+  delay_seconds: 1.5
+  jitter_seconds: 0.8
+  max_retries: 4
+  retry_backoff_seconds: 1.5
+  request_timeout_seconds: 45
+  proxies: []
+
+output:
+  dir: output
+  manifest: true
+  log_level: info
