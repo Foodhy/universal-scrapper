@@ -1,0 +1,15 @@
+# Ficha a exportar. El ritmo, el límite y las estrategias viven en config.yaml
+# o en rappi-co-full.yaml. Otra app = otro archivo en profiles/.
+
+name: rappi-co
+app_id: com.rappi.storekeeper
+app_url: https://play.google.com/store/apps/details?id=com.rappi.storekeeper&hl=es_CO
+lang: es
+country: co
+devices:
+  - phone
+  - tablet
+scores:
+  - 1
+  - 2
+sort: newest

@@ -25,6 +25,38 @@ def test_load_settings_reads_rappi_defaults():
     assert settings.scores == [1, 2]
     assert settings.devices == ["phone", "tablet"]
     assert settings.strategy == "auto"
+    assert settings.strategy_order == ["library", "batchexecute"]
+    assert settings.per_query_limit == 20
+    assert settings.profile_name == "profiles/rappi-co.yaml"
+    assert settings.output_dir.name == "output"
+    assert settings.output_dir.parent.name == "playstore-reviews"
+
+
+def test_full_profile_raises_the_limit_without_changing_the_app():
+    source = Path(__file__).resolve().parents[1] / "profiles" / "rappi-co-full.yaml"
+    settings = load_settings(source)
+    assert settings.app_id == "com.rappi.storekeeper"
+    assert settings.scores == [1, 2]
+    assert settings.devices == ["phone", "tablet"]
+    assert settings.per_query_limit == 2000
+    assert settings.page_size == 150
+    assert settings.delay_seconds == 2
+    assert settings.output_dir.parent.name == "playstore-reviews"
+
+
+def test_top_level_limit_overrides_the_profile(tmp_path: Path):
+    profile = tmp_path / "app.yaml"
+    profile.write_text(
+        "name: demo\napp_id: com.example.app\ncountry: mx\nlang: es\n"
+        "devices: [phone]\nscores: [1]\ntransport:\n  per_query_limit: 50\n",
+        encoding="utf-8",
+    )
+    entry = tmp_path / "config.yaml"
+    entry.write_text("profile: app.yaml\nper_query_limit: 7\n", encoding="utf-8")
+    settings = load_settings(entry)
+    assert settings.app_id == "com.example.app"
+    assert settings.country == "mx"
+    assert settings.per_query_limit == 7
 
 
 def test_payload_includes_score_and_tablet():

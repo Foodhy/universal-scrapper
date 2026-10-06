@@ -70,6 +70,8 @@ class BatchexecuteStrategy:
                 browser_headers(settings.lang, settings.country),
                 self.proxies.next_mapping(),
                 settings.max_retries,
+                retry_backoff_seconds=settings.retry_backoff_seconds,
+                timeout_seconds=settings.request_timeout_seconds,
             )
             items, token = parse_batchexecute(text)
             if not items:

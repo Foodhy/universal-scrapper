@@ -1,40 +1,24 @@
-# Prueba de concepto: reseñas públicas de SoyRappi en Colombia.
-# Cambia estos valores en otra sesión; no hace falta tocar el código.
+# Corrida corta de SoyRappi en Colombia. La ficha está en profiles/rappi-co.yaml.
+# Histórico: python -m playstore_reviews --config profiles/rappi-co-full.yaml
 
-app_id: com.rappi.storekeeper
-# También puedes pegar el enlace completo en lugar del id:
-# app_url: https://play.google.com/store/apps/details?id=com.rappi.storekeeper&hl=es_CO
+profile: profiles/rappi-co.yaml
 
-lang: es
-country: co
+transport:
+  # auto recorre strategy_order y se queda con la primera que traiga filas.
+  strategy: auto
+  strategy_order:
+    - library
+    - batchexecute
+  per_query_limit: 20
+  page_size: 100
+  delay_seconds: 1.5
+  jitter_seconds: 0.8
+  max_retries: 4
+  retry_backoff_seconds: 1.5
+  request_timeout_seconds: 45
+  proxies: []
 
-# phone = Teléfono, tablet = Tablet. También: chromebook, tv.
-devices:
-  - phone
-  - tablet
-
-# Solo 1 y 2 estrellas en esta prueba.
-scores:
-  - 1
-  - 2
-
-# newest | relevant | rating
-sort: newest
-
-# Tope por combinación dispositivo + estrellas. Sube este número cuando quieras la corrida completa.
-per_query_limit: 20
-page_size: 20
-
-# library | batchexecute | auto
-# auto prueba la librería y, si falla, usa el POST público directo.
-strategy: auto
-
-# Pausa entre páginas y entre consultas, para no martillar el endpoint.
-delay_seconds: 1.5
-jitter_seconds: 0.8
-max_retries: 3
-
-# Lista vacía = sin proxy. También se lee PLAYSTORE_PROXIES del entorno.
-proxies: []
-
-output_dir: output
+output:
+  dir: output
+  manifest: true
+  log_level: info

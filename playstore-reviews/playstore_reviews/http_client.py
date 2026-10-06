@@ -60,6 +60,8 @@ def post_with_retries(
     headers: dict[str, str],
     proxies: dict[str, str] | None,
     max_retries: int,
+    retry_backoff_seconds: float = 1.5,
+    timeout_seconds: float = 45,
 ) -> str:
     last_error: Exception | None = None
     for attempt in range(1, max_retries + 1):
@@ -69,7 +71,7 @@ def post_with_retries(
                 data=data.encode(),
                 headers=headers,
                 proxies=proxies,
-                timeout=45,
+                timeout=timeout_seconds,
             )
             text = response.text
             if response.status_code in {429, 500, 502, 503, 504}:
@@ -83,5 +85,5 @@ def post_with_retries(
             return text
         except (requests.RequestException, requests.HTTPError) as exc:
             last_error = exc
-            time.sleep(min(8, 1.5 * attempt))
+            time.sleep(min(30, retry_backoff_seconds * attempt))
     raise RuntimeError(f"No se pudo consultar Play Store: {last_error}") from last_error

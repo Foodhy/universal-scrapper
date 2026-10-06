@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
 
-from playstore_reviews.config import load_settings
+from playstore_reviews.config import describe_plan, load_settings
 from playstore_reviews.runner import run
 
 
@@ -26,7 +27,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--limit", type=int, dest="per_query_limit")
     parser.add_argument("--strategy", choices=["library", "batchexecute", "auto"])
     parser.add_argument("--output-dir")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Muestra el plan y no llama a Play Store",
+    )
     return parser
+
+
+def configure_logging(level: str, output_dir: Path) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    numeric = getattr(logging, level.upper(), logging.INFO)
+    logging.basicConfig(
+        level=numeric,
+        format="%(asctime)s %(levelname)s %(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(output_dir / "playstore-reviews.log", encoding="utf-8"),
+        ],
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -47,14 +66,12 @@ def main(argv: list[str] | None = None) -> int:
         "output_dir": args.output_dir,
     }
     settings = load_settings(config_path, overrides)
-    print(
-        "Consultando "
-        f"{settings.app_id} hl={settings.lang} gl={settings.country} "
-        f"dispositivos={','.join(settings.devices)} "
-        f"estrellas={','.join(str(s) for s in settings.scores)} "
-        f"estrategia={settings.strategy} limite={settings.per_query_limit}"
-    )
-    result, path = run(settings)
+    print(describe_plan(settings))
+    if args.dry_run:
+        print("dry-run: no se consultó Play Store")
+        return 0
+    configure_logging(settings.log_level, settings.output_dir)
+    result, path, manifest = run(settings)
     print(f"Reseñas: {len(result.reviews)}")
     for query in result.queries:
         status = query.error or "ok"
@@ -63,4 +80,6 @@ def main(argv: list[str] | None = None) -> int:
             f"{query.fetched} ({status})"
         )
     print(f"Excel: {path}")
+    if manifest is not None:
+        print(f"Manifiesto: {manifest}")
     return 0

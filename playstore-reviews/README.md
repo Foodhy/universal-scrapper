@@ -1,6 +1,8 @@
 # Reseñas de Google Play
 
-Prueba de concepto para bajar reseñas públicas de cualquier app de Google Play y dejarlas en un Excel. La configuración de ejemplo apunta a **SoyRappi - Gana plata** (`com.rappi.storekeeper`) en Colombia, teléfono y tablet, solo 1 y 2 estrellas.
+Exporta reseñas públicas de cualquier app de Google Play a Excel. La ficha de ejemplo es **SoyRappi - Gana plata** (`com.rappi.storekeeper`) en Colombia, teléfono y tablet, solo 1 y 2 estrellas.
+
+Lo que ya corre es la base. La ficha, el ritmo y el histórico están separados para poder endurecer la corrida cambiando YAML, no el código.
 
 El listado de reseñas no viene en el HTML de la ficha. Play lo pide por un endpoint público (`batchexecute`, RPC `oCPfdb`), el mismo que usa la web al filtrar por estrellas y por dispositivo. Este módulo tiene dos formas de llamarlo:
 
@@ -26,15 +28,30 @@ cp .env.example .env
 
 En Windows el activate es `.venv\Scripts\activate`.
 
+## Qué archivo se toca
+
+| Archivo | Para qué |
+|---|---|
+| `profiles/rappi-co.yaml` | La ficha: app, país, idioma, dispositivos, estrellas, orden. Otra app es otro archivo en `profiles/`. |
+| `config.yaml` | La corrida corta. Apunta a ese perfil y fija límite 20, pausas y el orden de estrategias. |
+| `profiles/rappi-co-full.yaml` | La misma ficha con límite 2000 y pausa más larga. Es la corrida de histórico, no el default. |
+| `.env` | `PLAYSTORE_PROXIES`. Pisa la lista del YAML. |
+
+`config.yaml` parte el trabajo en dos bloques:
+
+- `transport`: estrategia, orden de respaldo, límite, tamaño de página, pausa, jitter, reintentos, backoff, timeout y proxies.
+- `output`: carpeta, si escribe el manifiesto JSON y el nivel de log.
+
+`strategy: auto` recorre `strategy_order` y se queda con la primera vía que devuelva filas. Hoy el orden es `library` y después `batchexecute`. Una tercera vía se agrega en `playstore_reviews/strategies/` y se registra en `NAMED_STRATEGIES`.
+
 ## Corrida de prueba
 
-Con el `config.yaml` de este folder (20 reseñas como máximo por cada par dispositivo + estrellas):
-
 ```bash
+python -m playstore_reviews --config config.yaml --dry-run
 python -m playstore_reviews --config config.yaml
 ```
 
-El Excel queda en `playstore-reviews/output/reviews-com.rappi.storekeeper-co-<fecha>.xlsx`.
+El Excel queda en `playstore-reviews/output/reviews-com.rappi.storekeeper-co-<fecha>.xlsx`. Al lado queda un `.json` con el plan y el conteo por consulta, sin las URLs de los proxies. El log va a `output/playstore-reviews.log`.
 
 Hojas:
 
@@ -47,9 +64,20 @@ Para una pasada más chica mientras pruebas la red:
 python -m playstore_reviews --config config.yaml --limit 5 --strategy batchexecute
 ```
 
-## Qué se cambia después, sin tocar código
+## Corrida larga
 
-Todo vive en `config.yaml` o en flags:
+Cuando quieras el histórico de esta misma ficha, sin cambiar el código:
+
+```bash
+python -m playstore_reviews --config profiles/rappi-co-full.yaml --dry-run
+python -m playstore_reviews --config profiles/rappi-co-full.yaml
+```
+
+Ese perfil pide hasta 2000 reseñas por cada par dispositivo + estrellas, de a 150, con 2 segundos más jitter entre consultas y 5 reintentos. Sigue siendo teléfono y tablet, 1 y 2 estrellas, Colombia.
+
+## Qué se cambia sin tocar código
+
+Flags que pisan el YAML:
 
 ```bash
 python -m playstore_reviews \
@@ -68,10 +96,10 @@ python -m playstore_reviews \
 | `devices` | `phone` (Teléfono), `tablet` (Tablet). También `chromebook` y `tv`. |
 | `scores` | `1` a `5`. Esta prueba usa `1` y `2`. |
 | `sort` | `newest`, `relevant`, `rating`. |
-| `per_query_limit` | Tope por cada combinación. Súbelo cuando quieras la corrida grande. |
-| `strategy` | `auto`, `library` o `batchexecute`. |
-| `delay_seconds`, `jitter_seconds` | Pausa entre consultas. |
-| `proxies` | Lista de URLs `http://user:pass@host:puerto`. |
+| `per_query_limit` | Tope por cada combinación. 20 en la prueba, 2000 en el perfil full. |
+| `strategy` / `strategy_order` | `auto`, `library` o `batchexecute`. En `auto`, el orden es la lista de respaldo. |
+| `delay_seconds`, `jitter_seconds`, `max_retries`, `retry_backoff_seconds` | Ritmo y reintentos. |
+| `proxies` | Lista de URLs `http://user:pass@host:puerto`. El manifiesto solo guarda cuántos había. |
 
 Los proxies del entorno pisan los del YAML:
 
@@ -103,4 +131,4 @@ source .venv/bin/activate
 python -m pytest
 ```
 
-Los tests cubren el parseo del enlace, el YAML de ejemplo y el armado del payload. No llaman a Play Store.
+Los tests cubren el parseo del enlace, los dos perfiles, el plan en `--dry-run`, el deduplicado y el manifiesto. No llaman a Play Store.
