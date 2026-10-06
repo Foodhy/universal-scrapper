@@ -105,6 +105,8 @@ def write_workbook(result: ScrapeResult, settings: Settings) -> Path:
     summary.append(["limite_por_consulta", settings.per_query_limit])
     summary.append(["proxies", len(settings.proxies)])
     summary.append(["reseñas", len(result.reviews)])
+    summary.append(["paises_en_filas", ", ".join(sorted({review.country for review in result.reviews}))])
+    summary.append(["detenido", "si" if result.stopped else "no"])
     summary.append([])
     summary.append(["dispositivo", "estrellas", "obtenidas", "estrategia", "error"])
     for query in result.queries:

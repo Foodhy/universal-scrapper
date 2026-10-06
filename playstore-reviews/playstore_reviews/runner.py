@@ -27,13 +27,15 @@ def dedupe_reviews(rows: list[Review], seen: set[tuple[str, str]]) -> list[Revie
     return unique
 
 
-def fetch_query(settings: Settings, device: str, score: int):
+def fetch_query(settings: Settings, device: str, score: int, should_stop=None):
     errors: list[str] = []
     names = settings.active_strategies
     for index, name in enumerate(names):
+        if should_stop and should_stop():
+            return [], name, "detenido"
         strategy = build_strategy(settings, name)
         try:
-            rows = strategy.fetch(device, score)
+            rows = strategy.fetch(device, score, should_stop=should_stop)
         except Exception as exc:  # noqa: BLE001 - se reporta y, en auto, se prueba la siguiente
             message = f"{name}: {exc}"
             errors.append(message)
@@ -46,7 +48,11 @@ def fetch_query(settings: Settings, device: str, score: int):
     return [], "auto", "; ".join(errors) if errors else None
 
 
-def run(settings: Settings) -> tuple[ScrapeResult, Path, Path | None]:
+def run(
+    settings: Settings,
+    should_stop=None,
+    export: bool = True,
+) -> tuple[ScrapeResult, Path | None, Path | None]:
     result = ScrapeResult()
     seen: set[tuple[str, str]] = set()
     queries = [(device, score) for device in settings.devices for score in settings.scores]
@@ -60,7 +66,11 @@ def run(settings: Settings) -> tuple[ScrapeResult, Path, Path | None]:
     )
 
     for index, (device, score) in enumerate(queries):
-        rows, strategy_name, error = fetch_query(settings, device, score)
+        if should_stop and should_stop():
+            result.stopped = True
+            logger.info("Corrida detenida antes de %s/%s*", device, score)
+            break
+        rows, strategy_name, error = fetch_query(settings, device, score, should_stop=should_stop)
         rows = dedupe_reviews(rows, seen)
         result.reviews.extend(rows)
         result.queries.append(
@@ -72,9 +82,15 @@ def run(settings: Settings) -> tuple[ScrapeResult, Path, Path | None]:
                 error=error,
             )
         )
+        if error == "detenido" or (should_stop and should_stop()):
+            result.stopped = True
+            logger.info("Corrida detenida")
+            break
         if index < len(queries) - 1:
-            pause(settings.delay_seconds, settings.jitter_seconds)
+            pause(settings.delay_seconds, settings.jitter_seconds, should_stop=should_stop)
 
+    if not export:
+        return result, None, None
     excel_path = write_workbook(result, settings)
     manifest_path = write_manifest(result, settings, excel_path) if settings.write_manifest else None
     logger.info("Excel %s (%s reseñas)", excel_path, len(result.reviews))

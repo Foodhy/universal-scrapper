@@ -6,3 +6,4 @@ __pycache__/
 output/*.xlsx
 output/*.json
 output/*.log
+output/*.yaml

@@ -42,7 +42,7 @@ class BatchexecuteStrategy:
         self.session = requests.Session()
         self.proxies = ProxyPool(settings.proxies)
 
-    def fetch(self, device: str, score: int) -> list[Review]:
+    def fetch(self, device: str, score: int, should_stop=None) -> list[Review]:
         settings = self.settings
         url = (
             "https://play.google.com/_/PlayStoreUi/data/batchexecute"
@@ -54,6 +54,8 @@ class BatchexecuteStrategy:
         seen: set[str] = set()
 
         while remaining > 0:
+            if should_stop and should_stop():
+                break
             page_size = min(settings.page_size, remaining, 150)
             body = _payload(
                 settings.app_id,

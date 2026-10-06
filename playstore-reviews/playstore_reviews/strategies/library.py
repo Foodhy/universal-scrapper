@@ -23,7 +23,9 @@ class LibraryStrategy:
         self.settings = settings
         self.proxies = ProxyPool(settings.proxies)
 
-    def fetch(self, device: str, score: int) -> list[Review]:
+    def fetch(self, device: str, score: int, should_stop=None) -> list[Review]:
+        if should_stop and should_stop():
+            return []
         settings = self.settings
         mapping = self.proxies.next_mapping()
         previous = {

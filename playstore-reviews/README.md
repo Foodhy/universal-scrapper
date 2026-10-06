@@ -14,6 +14,23 @@ El listado de reseñas no viene en el HTML de la ficha. Play lo pide por un endp
 
 País e idioma salen de `gl` y `hl` (en el enlace de ejemplo, `hl=es_CO` es idioma `es` y país `co`). El filtro de estrellas y el de dispositivo van en el mismo request, así que 1 estrella en teléfono y 1 estrella en tablet son consultas distintas.
 
+## Comandos
+
+Desde `playstore-reviews`, con el entorno activo:
+
+```bash
+python -m playstore_reviews --config config.yaml --dry-run
+python -m playstore_reviews --config config.yaml
+python -m playstore_reviews --config profiles/rappi-co-full.yaml
+python -m playstore_reviews.server
+python -m playstore_reviews.classify --threshold 0.8
+python -m pytest -q
+```
+
+Lo mismo, si tienes `make`: `make dry-run`, `make scrape`, `make scrape-full`, `make panel`, `make classify`, `make test`.
+
+El panel abre en http://127.0.0.1:8765 y solo escucha en tu máquina. Ahí se elige la ficha, los países, el dispositivo, las estrellas y el límite; se corre y se detiene. La clasificación usa Jev (`typesafe/jev-1.13`) por la Decisions API de OpenRouter. La clave va en `OPENROUTER_API_KEY` y el panel no la pide. Cada comentario es una llamada con las 8 preguntas; cada respuesta es la probabilidad de sí. El umbral inicial es 80% y se puede mover sin volver a llamar. El JSON completo queda en `output/latest-classification.json` y el Excel de probabilidades en `output/clasificacion-*.xlsx`.
+
 ## Setup
 
 Hace falta Python 3.11+.
@@ -131,4 +148,4 @@ source .venv/bin/activate
 python -m pytest
 ```
 
-Los tests cubren el parseo del enlace, los dos perfiles, el plan en `--dry-run`, el deduplicado y el manifiesto. No llaman a Play Store.
+Los tests cubren perfiles, el plan, el deduplicado, la parada de una corrida, los 8 problemas, el filtro por fecha y que el panel responde. No llaman a Play Store ni a Jev.

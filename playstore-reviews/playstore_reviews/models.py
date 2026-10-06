@@ -45,3 +45,33 @@ class QueryResult:
 class ScrapeResult:
     reviews: list[Review] = field(default_factory=list)
     queries: list[QueryResult] = field(default_factory=list)
+    stopped: bool = False
+
+
+def _stamp(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def review_to_dict(review: Review) -> dict:
+    return {
+        "app_id": review.app_id,
+        "country": review.country,
+        "lang": review.lang,
+        "device": review.device,
+        "score": review.score,
+        "review_id": review.review_id,
+        "user_name": review.user_name,
+        "user_image": review.user_image,
+        "content": review.content,
+        "review_date": _stamp(review.review_date),
+        "thumbs_up": review.thumbs_up,
+        "app_version": review.app_version,
+        "developer_reply": review.developer_reply,
+        "developer_reply_date": _stamp(review.developer_reply_date),
+        "sort": review.sort,
+        "strategy": review.strategy,
+        "fetched_at": _stamp(review.fetched_at),
+        "review_url": review.review_url,
+    }

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reseñas Play Store</title>
+  <style>
+    :root {
+      --ink: #1c1915;
+      --muted: #5e584f;
+      --line: #e4ddd0;
+      --paper: #f6f3ec;
+      --card: #fffdf8;
+      --green: #1f4e3d;
+      --green-soft: #e5f2eb;
+      --warn: #8a3e12;
+      --bar: #d7c4a3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    header, main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+    header { padding: 28px 0 8px; }
+    h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.03em; }
+    h2 { font-size: 18px; margin: 0 0 12px; }
+    p { color: var(--muted); }
+    nav { display: flex; gap: 8px; margin: 18px 0; }
+    nav button, button {
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font: inherit;
+    }
+    nav button.active, button.primary { background: var(--green); color: white; border-color: var(--green); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    section { display: none; }
+    section.active { display: block; }
+    .grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font: inherit;
+      background: white;
+    }
+    textarea { min-height: 64px; }
+    .checks { display: flex; flex-wrap: wrap; gap: 8px; }
+    .checks label {
+      margin: 0;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      color: var(--ink);
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .actions { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
+    pre {
+      white-space: pre-wrap;
+      background: #221f1b;
+      color: #f4efe6;
+      border-radius: 12px;
+      padding: 12px;
+      min-height: 180px;
+      max-height: 320px;
+      overflow: auto;
+      font-size: 12px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; padding: 8px; }
+    th { font-size: 12px; color: var(--muted); }
+    .comment { max-width: 420px; }
+    .bars { display: grid; gap: 8px; }
+    .bar-row { display: grid; grid-template-columns: 220px 1fr 70px; gap: 8px; align-items: center; }
+    .track { height: 10px; background: var(--bar); border-radius: 99px; overflow: hidden; }
+    .fill { height: 100%; background: var(--green); }
+    .pill { display: inline-block; background: var(--green-soft); color: var(--green); border-radius: 99px; padding: 2px 8px; margin: 0 4px 4px 0; font-size: 12px; }
+    .prob { font-variant-numeric: tabular-nums; }
+    .status { font-weight: 650; }
+    .problem { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+    @media (max-width: 860px) {
+      .grid, .row, .bar-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Reseñas de Play Store</h1>
+    <p id="intro">Explora una ficha, detén la corrida cuando quieras y clasifica cada comentario con Jev. Jev devuelve la probabilidad de cada problema, no un texto.</p>
+    <nav>
+      <button type="button" class="active" data-tab="explorar">Explorar</button>
+      <button type="button" data-tab="resultados">Resultados</button>
+      <button type="button" data-tab="problemas">Problemas</button>
+    </nav>
+  </header>
+  <main>
+    <section id="explorar" class="active">
+      <div class="grid">
+        <form id="scrape-form" class="card">
+          <h2>Qué explorar</h2>
+          <label>App id</label>
+          <input name="app_id" />
+          <label>O pega el enlace de la ficha</label>
+          <input name="app_url" />
+          <div class="row">
+            <div>
+              <label>Idioma (hl)</label>
+              <input name="lang" />
+            </div>
+            <div>
+              <label>Orden</label>
+              <select name="sort">
+                <option value="newest">Más nuevas</option>
+                <option value="relevant">Más relevantes</option>
+                <option value="rating">Por calificación</option>
+              </select>
+            </div>
+          </div>
+          <label>Países</label>
+          <div id="countries" class="checks"></div>
+          <label>Dispositivos</label>
+          <div id="devices" class="checks"></div>
+          <label>Estrellas</label>
+          <div id="scores" class="checks"></div>
+          <div class="row">
+            <div>
+              <label>Límite por país, dispositivo y estrellas</label>
+              <input name="per_query_limit" type="number" min="1" />
+            </div>
+            <div>
+              <label>Tamaño de página</label>
+              <input name="page_size" type="number" min="1" max="150" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Estrategia</label>
+              <select name="strategy">
+                <option value="auto">auto (librería y luego POST)</option>
+                <option value="library">library</option>
+                <option value="batchexecute">batchexecute</option>
+              </select>
+            </div>
+            <div>
+              <label>Pausa en segundos</label>
+              <input name="delay_seconds" type="number" min="0" step="0.1" />
+            </div>
+          </div>
+          <div class="actions">
+            <button class="primary" id="start" type="submit">Correr</button>
+            <button id="stop" type="button">Detener</button>
+            <span class="status" id="status">idle</span>
+          </div>
+        </form>
+        <div class="card">
+          <h2>Avance</h2>
+          <p id="progress">Sin corrida.</p>
+          <pre id="log"></pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="resultados">
+      <div class="card">
+        <h2>Filtros</h2>
+        <div class="row">
+          <div><label>Desde</label><input id="from" type="date" /></div>
+          <div><label>Hasta</label><input id="to" type="date" /></div>
+        </div>
+        <div class="row">
+          <div><label>País</label><input id="filter-country" placeholder="co" /></div>
+          <div><label>Texto</label><input id="filter-text" placeholder="soporte, deuda, identidad" /></div>
+        </div>
+        <div class="actions">
+          <button type="button" id="apply-filters" class="primary">Filtrar</button>
+          <a id="excel-link" href="#" hidden>Descargar Excel de reseñas</a>
+        </div>
+        <p id="result-count"></p>
+        <table>
+          <thead>
+            <tr><th>Fecha</th><th>País</th><th>Disp.</th><th>★</th><th>Usuario</th><th>Comentario</th></tr>
+          </thead>
+          <tbody id="reviews"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="problemas">
+      <div class="card">
+        <h2>Los 8 problemas</h2>
+        <p>Cada comentario se manda una vez a Jev con estas ocho preguntas. La respuesta de cada una es una probabilidad de sí. Umbral de la captura de Jev: 80%. Mover el umbral no vuelve a llamar al modelo.</p>
+        <p id="jev-key"></p>
+        <label>Umbral de sí</label>
+        <input id="threshold" type="range" min="0.5" max="0.95" step="0.05" value="0.8" />
+        <p id="threshold-label">80%</p>
+        <div id="problem-editor"></div>
+        <div class="actions">
+          <button type="button" id="classify" class="primary">Clasificar con Jev</button>
+          <button type="button" id="reclassify">Volver a clasificar todo</button>
+          <a id="class-excel" href="#" hidden>Excel de probabilidades</a>
+          <a id="class-json" href="/api/classification/raw">JSON completo</a>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Más frecuentes en el filtro</h2>
+        <p id="insight-meta"></p>
+        <div id="bars" class="bars"></div>
+      </div>
+      <div class="card">
+        <h2>Comentario por comentario</h2>
+        <table>
+          <thead>
+            <tr><th>Fecha</th><th>Usuario</th><th>Comentario</th><th>Probabilidades</th></tr>
+          </thead>
+          <tbody id="class-rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script>
+    const state = { defaults: null, problems: [], timer: null };
+
+    function tab(name) {
+      document.querySelectorAll("nav button").forEach((button) => {
+        button.classList.toggle("active", button.dataset.tab === name);
+      });
+      document.querySelectorAll("main section").forEach((section) => {
+        section.classList.toggle("active", section.id === name);
+      });
+      if (name === "resultados") loadReviews();
+      if (name === "problemas") loadClassification();
+    }
+
+    document.querySelectorAll("nav button").forEach((button) => {
+      button.addEventListener("click", () => tab(button.dataset.tab));
+    });
+
+    function checks(container, name, options, selected, labeler) {
+      const chosen = new Set(selected.map(String));
+      container.innerHTML = "";
+      options.forEach((option) => {
+        const label = document.createElement("label");
+        label.innerHTML = `<input type="checkbox" name="${name}" value="${option}" ${chosen.has(String(option)) ? "checked" : ""}/> ${labeler(option)}`;
+        container.appendChild(label);
+      });
+    }
+
+    function selected(name) {
+      return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map((node) => node.value);
+    }
+
+    function scrapePayload() {
+      const form = new FormData(document.querySelector("#scrape-form"));
+      return {
+        app_id: form.get("app_id"),
+        app_url: form.get("app_url"),
+        lang: form.get("lang"),
+        sort: form.get("sort"),
+        countries: selected("countries"),
+        devices: selected("devices"),
+        scores: selected("scores").map(Number),
+        per_query_limit: Number(form.get("per_query_limit")),
+        page_size: Number(form.get("page_size")),
+        strategy: form.get("strategy"),
+        delay_seconds: Number(form.get("delay_seconds")),
+      };
+    }
+
+    function filters() {
+      const params = new URLSearchParams();
+      const from = document.querySelector("#from").value;
+      const to = document.querySelector("#to").value;
+      const country = document.querySelector("#filter-country").value.trim();
+      const text = document.querySelector("#filter-text").value.trim();
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+      if (country) params.set("countries", country);
+      if (text) params.set("q", text);
+      params.set("threshold", document.querySelector("#threshold").value);
+      return params;
+    }
+
+    function renderProblems() {
+      const editor = document.querySelector("#problem-editor");
+      editor.innerHTML = "";
+      state.problems.forEach((problem, index) => {
+        const block = document.createElement("div");
+        block.className = "problem";
+        block.innerHTML = `
+          <strong>${index + 1}. ${problem.title}</strong>
+          <label>Id</label><input data-field="id" data-index="${index}" value="${escapeAttr(problem.id)}" />
+          <label>Título</label><input data-field="title" data-index="${index}" value="${escapeAttr(problem.title)}" />
+          <label>Pregunta para Jev</label><textarea data-field="instructions" data-index="${index}">${escapeText(problem.instructions)}</textarea>
+          <label>Sí cuando</label><textarea data-field="true" data-index="${index}">${escapeText(problem.true)}</textarea>
+          <label>No cuando</label><textarea data-field="false" data-index="${index}">${escapeText(problem.false)}</textarea>
+        `;
+        editor.appendChild(block);
+      });
+      editor.querySelectorAll("input, textarea").forEach((node) => {
+        node.addEventListener("input", () => {
+          state.problems[node.dataset.index][node.dataset.field] = node.value;
+        });
+      });
+    }
+
+    function escapeAttr(value) {
+      return String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;");
+    }
+    function escapeText(value) {
+      return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+    }
+
+    async function boot() {
+      const response = await fetch("/api/defaults");
+      state.defaults = await response.json();
+      state.problems = state.defaults.problems;
+      const form = document.querySelector("#scrape-form");
+      ["app_id", "app_url", "lang", "per_query_limit", "page_size", "delay_seconds"].forEach((name) => {
+        form.elements[name].value = state.defaults[name];
+      });
+      form.elements.sort.value = state.defaults.sort;
+      form.elements.strategy.value = state.defaults.strategy;
+      checks(document.querySelector("#countries"), "countries", state.defaults.country_choices, state.defaults.countries, (code) => code.toUpperCase());
+      checks(document.querySelector("#devices"), "devices", ["phone", "tablet", "chromebook", "tv"], state.defaults.devices, (item) => item);
+      checks(document.querySelector("#scores"), "scores", [1, 2, 3, 4, 5], state.defaults.scores.map(String), (item) => `${item}★`);
+      document.querySelector("#threshold").value = state.defaults.threshold;
+      document.querySelector("#threshold-label").textContent = `${Math.round(state.defaults.threshold * 100)}%`;
+      document.querySelector("#jev-key").textContent = state.defaults.jev_configured
+        ? `Modelo ${state.defaults.model}. La clave OPENROUTER_API_KEY está en el entorno.`
+        : `Modelo ${state.defaults.model}. Falta OPENROUTER_API_KEY en el entorno: sin esa clave Jev no clasifica. El panel no pide ni muestra la clave.`;
+      renderProblems();
+      poll();
+    }
+
+    async function poll() {
+      const response = await fetch("/api/state");
+      const job = await response.json();
+      document.querySelector("#status").textContent = job.status;
+      document.querySelector("#progress").textContent = job.progress.total
+        ? `${job.kind || ""} ${job.progress.done}/${job.progress.total}`
+        : "Sin corrida.";
+      document.querySelector("#log").textContent = (job.logs || []).join("\n");
+      document.querySelector("#start").disabled = job.status === "running";
+      document.querySelector("#classify").disabled = job.status === "running";
+      const running = job.status === "running";
+      if (running && !state.timer) state.timer = setInterval(poll, 1000);
+      if (!running && state.timer) {
+        clearInterval(state.timer);
+        state.timer = null;
+        if (document.querySelector("#resultados").classList.contains("active")) loadReviews();
+        if (document.querySelector("#problemas").classList.contains("active")) loadClassification();
+      }
+      if (job.excel) {
+        const link = document.querySelector("#excel-link");
+        link.hidden = false;
+        link.href = `/api/file?name=${encodeURIComponent(job.excel)}`;
+      }
+      if (job.classification_excel) {
+        const link = document.querySelector("#class-excel");
+        link.hidden = false;
+        link.href = `/api/file?name=${encodeURIComponent(job.classification_excel)}`;
+      }
+    }
+
+    document.querySelector("#scrape-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const response = await fetch("/api/scrape", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(scrapePayload()),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        document.querySelector("#log").textContent = body.error || "No se pudo iniciar";
+        return;
+      }
+      poll();
+    });
+
+    document.querySelector("#stop").addEventListener("click", () => fetch("/api/stop", {method: "POST"}));
+    document.querySelector("#apply-filters").addEventListener("click", () => {
+      loadReviews();
+      loadClassification();
+    });
+    document.querySelector("#threshold").addEventListener("input", (event) => {
+      document.querySelector("#threshold-label").textContent = `${Math.round(event.target.value * 100)}%`;
+      loadClassification();
+    });
+
+    async function loadReviews() {
+      const response = await fetch(`/api/reviews?${filters()}`);
+      const body = await response.json();
+      document.querySelector("#result-count").textContent = `${body.reviews.length} reseñas en el filtro`;
+      const bodyNode = document.querySelector("#reviews");
+      bodyNode.innerHTML = "";
+      body.reviews.forEach((review) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${review.review_date || ""}</td><td>${review.country || ""}</td><td>${review.device || ""}</td><td>${review.score || ""}</td><td>${escapeText(review.user_name || "")}</td><td class="comment">${escapeText(review.content || "")}</td>`;
+        bodyNode.appendChild(row);
+      });
+    }
+
+    function readProblemsFromState() {
+      return state.problems.map((problem) => ({
+        id: problem.id.trim(),
+        title: problem.title.trim(),
+        instructions: problem.instructions.trim(),
+        true: problem.true.trim(),
+        false: problem.false.trim(),
+      }));
+    }
+
+    async function classify(force) {
+      const response = await fetch("/api/classify", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          problems: readProblemsFromState(),
+          threshold: Number(document.querySelector("#threshold").value),
+          force,
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        document.querySelector("#insight-meta").textContent = body.error || "No se pudo clasificar";
+        return;
+      }
+      tab("problemas");
+      poll();
+    }
+
+    document.querySelector("#classify").addEventListener("click", () => classify(false));
+    document.querySelector("#reclassify").addEventListener("click", () => classify(true));
+
+    async function loadClassification() {
+      const response = await fetch(`/api/classification?${filters()}`);
+      const body = await response.json();
+      const insights = body.insights || {problems: [], classified: 0, reviews: 0, unmatched: 0};
+      document.querySelector("#insight-meta").textContent =
+        `${insights.classified} clasificadas de ${insights.reviews} en el filtro. ${insights.unmatched} no llegan al umbral en ningún problema. Un comentario puede contar en varios.`;
+      const bars = document.querySelector("#bars");
+      bars.innerHTML = "";
+      const max = Math.max(1, ...insights.problems.map((item) => item.count));
+      insights.problems.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "bar-row";
+        row.innerHTML = `<span>${item.title}</span><div class="track"><div class="fill" style="width:${(item.count / max) * 100}%"></div></div><span class="prob">${item.count} · ${Math.round(item.share * 100)}%</span>`;
+        bars.appendChild(row);
+      });
+      const titles = Object.fromEntries((body.problems || []).map((problem) => [problem.id, problem.title]));
+      const threshold = Number(document.querySelector("#threshold").value);
+      const rows = document.querySelector("#class-rows");
+      rows.innerHTML = "";
+      (body.reviews || []).forEach((review) => {
+        const probs = Object.entries(review.answers || {})
+          .map(([id, answer]) => {
+            const value = answer.noul;
+            if (value == null) return "";
+            const matched = value >= threshold;
+            return `<span class="${matched ? "pill" : ""}">${titles[id] || id} ${Math.round(value * 100)}%</span>`;
+          })
+          .join(" ");
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${review.review_date || ""}</td><td>${escapeText(review.user_name || "")}</td><td class="comment">${escapeText(review.content || "")}</td><td>${probs || "sin clasificar"}</td>`;
+        rows.appendChild(row);
+      });
+      if (body.excel) {
+        const link = document.querySelector("#class-excel");
+        link.hidden = false;
+        link.href = `/api/file?name=${encodeURIComponent(body.excel)}`;
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>

@@ -37,9 +37,15 @@ class ProxyPool:
         return {"http": url, "https": url}
 
 
-def pause(delay_seconds: float, jitter_seconds: float) -> None:
+def pause(delay_seconds: float, jitter_seconds: float, should_stop=None) -> None:
     extra = random.uniform(0, jitter_seconds) if jitter_seconds > 0 else 0
-    time.sleep(max(0, delay_seconds) + extra)
+    remaining = max(0, delay_seconds) + extra
+    while remaining > 0:
+        if should_stop and should_stop():
+            return
+        step = min(0.2, remaining)
+        time.sleep(step)
+        remaining -= step
 
 
 def browser_headers(lang: str, country: str) -> dict[str, str]:

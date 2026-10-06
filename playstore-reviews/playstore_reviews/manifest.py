@@ -38,6 +38,7 @@ def write_manifest(result: ScrapeResult, settings: Settings, excel_path: Path) -
         "retry_backoff_seconds": settings.retry_backoff_seconds,
         "proxy_count": len(settings.proxies),
         "review_count": len(result.reviews),
+        "stopped": result.stopped,
         "queries": [
             {
                 "device": query.device,
